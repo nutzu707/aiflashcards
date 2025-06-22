@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { ArrowLeftIcon, ArrowRightIcon } from "lucide-react";
 
 const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
@@ -17,7 +18,6 @@ type StoredSet = {
 const STORAGE_KEY = "ai_flashcard_sets";
 
 const parseFlashcards = (text: string): Flashcard[] => {
-  // Expecting format: Q: ... A: ... (repeated)
   const cards: Flashcard[] = [];
   const regex = /Q:\s*([\s\S]+?)\s*A:\s*([\s\S]+?)(?=Q:|$)/g;
   let match;
@@ -30,7 +30,6 @@ const parseFlashcards = (text: string): Flashcard[] => {
   return cards;
 };
 
-// Typing animation hook for placeholder
 const useTypingPlaceholder = (examples: string[], typingSpeed = 70, pause = 1200) => {
   const [placeholder, setPlaceholder] = useState("");
   const [exampleIdx, setExampleIdx] = useState(0);
@@ -70,7 +69,6 @@ const useTypingPlaceholder = (examples: string[], typingSpeed = 70, pause = 1200
   return `${placeholder}${!deleting && charIdx < examples[exampleIdx].length ? "|" : ""}...`;
 };
 
-// Helper functions for localStorage
 function getStoredSets(): StoredSet[] {
   if (typeof window === "undefined") return [];
   try {
@@ -87,9 +85,7 @@ function saveStoredSets(sets: StoredSet[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(sets));
 }
 
-// Given a base subject, return a unique subject name (e.g. "Math", "Math(1)", "Math(2)", etc.)
 function getUniqueSubjectName(base: string, sets: StoredSet[]): string {
-  // Find all sets with subject === base or subject matches base(n)
   const regex = new RegExp(`^${escapeRegExp(base)}(?:\\((\\d+)\\))?$`);
   let maxIndex = -1;
   let foundBase = false;
@@ -111,7 +107,6 @@ function getUniqueSubjectName(base: string, sets: StoredSet[]): string {
 }
 
 function escapeRegExp(str: string) {
-  // Escape regex special chars
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
@@ -132,7 +127,6 @@ function updateStoredSet(subject: string, flashcards: Flashcard[]) {
   }
 }
 
-// --- Flashcard Flip Animation CSS ---
 const flashcardFlipStyles = `
 .flashcard-flip-container {
   perspective: 1000px;
@@ -172,41 +166,34 @@ const flashcardFlipStyles = `
 }
 `;
 
-// --- Flashcard Switch Animation CSS (more alive) ---
 const flashcardSwitchStyles = `
 .flashcard-switch-anim {
-  animation: flashcardSwitchAlive 0.55s cubic-bezier(.4,2,.6,1);
+  animation: flashcardSwitchSleek .22s cubic-bezier(.4,1.2,.6,1);
   z-index: 1;
-  box-shadow: 0 8px 32px 0 rgba(0, 148, 222, 0.18), 0 1.5px 8px 0 rgba(0,0,0,0.08);
+  box-shadow: 0 6px 24px 0 rgba(0, 148, 222, 0.13), 0 1.5px 8px 0 rgba(0,0,0,0.08);
 }
-@keyframes flashcardSwitchAlive {
+@keyframes flashcardSwitchSleek {
   0% {
-    opacity: 0;
-    transform: scale(0.92) rotateZ(-6deg) translateY(40px);
-    filter: blur(2px) brightness(1.1);
+    opacity: 0.7;
+    transform: scale(0.98) translateY(18px);
+    filter: blur(1.2px) brightness(1.04);
     box-shadow: 0 0 0 0 rgba(0,148,222,0.0);
   }
-  30% {
+  40% {
     opacity: 1;
-    transform: scale(1.04) rotateZ(2deg) translateY(-10px);
-    filter: blur(0.5px) brightness(1.05);
-    box-shadow: 0 8px 32px 0 rgba(0, 148, 222, 0.18);
-  }
-  60% {
-    opacity: 1;
-    transform: scale(0.98) rotateZ(-1deg) translateY(4px);
-    filter: blur(0px) brightness(1);
-    box-shadow: 0 4px 16px 0 rgba(0, 148, 222, 0.10);
+    transform: scale(1.015) translateY(-6px);
+    filter: blur(0.3px) brightness(1.01);
+    box-shadow: 0 6px 24px 0 rgba(0, 148, 222, 0.13);
   }
   80% {
     opacity: 1;
-    transform: scale(1.01) rotateZ(0.5deg) translateY(-2px);
+    transform: scale(0.995) translateY(2px);
     filter: blur(0px) brightness(1);
-    box-shadow: 0 2px 8px 0 rgba(0, 148, 222, 0.08);
+    box-shadow: 0 2px 8px 0 rgba(0, 148, 222, 0.07);
   }
   100% {
     opacity: 1;
-    transform: scale(1) rotateZ(0deg) translateY(0);
+    transform: scale(1) translateY(0);
     filter: blur(0px) brightness(1);
     box-shadow: 0 1.5px 8px 0 rgba(0,0,0,0.08);
   }
@@ -214,14 +201,12 @@ const flashcardSwitchStyles = `
 `;
 
 if (typeof window !== "undefined") {
-  // Inject the CSS once for flip
   if (!document.getElementById("flashcard-flip-style")) {
     const style = document.createElement("style");
     style.id = "flashcard-flip-style";
     style.innerHTML = flashcardFlipStyles;
     document.head.appendChild(style);
   }
-  // Inject the CSS once for switch
   if (!document.getElementById("flashcard-switch-style")) {
     const style = document.createElement("style");
     style.id = "flashcard-switch-style";
@@ -237,20 +222,11 @@ const Flashcards = () => {
   const [error, setError] = useState<string | null>(null);
   const [current, setCurrent] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
-
-  // New state to control generator visibility
   const [showGenerator, setShowGenerator] = useState(true);
-
-  // New state to track if we're adding more questions
   const [addingMore, setAddingMore] = useState(false);
-
-  // State for stored sets
   const [storedSets, setStoredSets] = useState<StoredSet[]>([]);
-
-  // Track which subject is currently being viewed (for add more, etc.)
   const [activeSubject, setActiveSubject] = useState<string | null>(null);
 
-  // Typing animation for placeholder
   const exampleSubjects = [
     "Quantum Physics",
     "Formula 1",
@@ -265,33 +241,36 @@ const Flashcards = () => {
   ];
   const animatedPlaceholder = useTypingPlaceholder(exampleSubjects);
 
-  // --- Flashcard Switch Animation State ---
   const [switchAnimKey, setSwitchAnimKey] = useState(0);
 
-  // Load stored sets on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
       setStoredSets(getStoredSets());
     }
   }, []);
 
+  // --- Flashcard Generation Logic (unchanged) ---
+  // ... (same as before, omitted for brevity) ...
+  // (Copy the generateFlashcards, handleSubmit, handleAddMore, handleFlip, handleCircleClick, handleBackToGenerator, handleStoredSetClick, handleDeleteStoredSet, and animation logic from the original code above.)
+
+  // --- Begin: Copy unchanged logic from original code ---
+  // (For brevity, this is the same as the original code above)
+  // --- Copy start ---
   // Helper to generate flashcards (5 at a time)
   // eslint-disable-next-line
   const generateFlashcards = async (subject: string, prevQuestions: string[] = [], isAddMore = false) => {
     setLoading(true);
     setError(null);
 
-    // If prevQuestions is empty, this is the initial generation
     let prompt = "";
     if (prevQuestions.length === 0) {
       prompt = `Generate 5 flashcards about "${subject}". For each flashcard, provide a question and its answer in the following format:
 
-Q: [question]
-A: [answer]
+Q: [question] (question must be less than 30 words)
+A: [answer] (answer must be less than 30 words)
 
 Only output the flashcards in this format.`;
     } else {
-      // Add instruction to avoid repeating previous questions
       const prevQs = prevQuestions.map((q, i) => `Q${i + 1}: ${q}`).join("\n");
       prompt = `Generate 5 additional flashcards about "${subject}". Do not repeat any of these questions:
 
@@ -299,8 +278,8 @@ ${prevQs}
 
 For each new flashcard, provide a question and its answer in the following format:
 
-Q: [question]
-A: [answer]
+Q: [question] (question must be less than 30 words)
+A: [answer] (answer must be less than 30 words)
 
 Only output the flashcards in this format.`;
     }
@@ -338,28 +317,32 @@ Only output the flashcards in this format.`;
         throw new Error("Could not parse flashcards from Gemini's response.");
       }
 
+      const filteredCards = cards.filter(card => card.question.split(/\s+/).filter(Boolean).length < 30);
+
+      if (filteredCards.length === 0) {
+        throw new Error("Could not parse flashcards with questions under 30 words from Gemini's response.");
+      }
+
       if (prevQuestions.length === 0) {
-        // New set: always add as a new set, possibly with a unique name
-        const uniqueSubject = addStoredSet(subject, cards);
+        const uniqueSubject = addStoredSet(subject, filteredCards);
         setStoredSets(getStoredSets());
         setSubject(uniqueSubject);
         setActiveSubject(uniqueSubject);
-        setFlashcards(cards);
+        setFlashcards(filteredCards);
         setShowGenerator(false);
         setCurrent(0);
         setShowAnswer(false);
         setSwitchAnimKey((k) => k + 1);
       } else {
-        // Add more to the current set (activeSubject)
         setFlashcards((prev) => {
-          const updated = [...prev, ...cards];
+          const updated = [...prev, ...filteredCards];
           if (activeSubject) {
             updateStoredSet(activeSubject, updated);
             setStoredSets(getStoredSets());
           }
           return updated;
         });
-        setCurrent(flashcards.length); // Move to the first of the new cards
+        setCurrent(flashcards.length);
         setShowAnswer(false);
         setSwitchAnimKey((k) => k + 1);
       }
@@ -375,7 +358,6 @@ Only output the flashcards in this format.`;
     }
   };
 
-  // Initial form submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFlashcards([]);
@@ -386,15 +368,12 @@ Only output the flashcards in this format.`;
     await generateFlashcards(subject, []);
   };
 
-  // Add 5 more questions
   const handleAddMore = async () => {
     setAddingMore(true);
-    // Gather all previous questions to avoid repeats
     const prevQuestions = flashcards.map((card) => card.question);
     await generateFlashcards(activeSubject ?? subject, prevQuestions, true);
   };
 
-  // Flip the flashcard
   const handleFlip = () => setShowAnswer((prev) => !prev);
 
   const handleCircleClick = (idx: number) => {
@@ -416,7 +395,6 @@ Only output the flashcards in this format.`;
     setSwitchAnimKey((k) => k + 1);
   };
 
-  // When user clicks a stored subject, load its flashcards and go to flashcard view
   const handleStoredSetClick = (set: StoredSet) => {
     setSubject(set.subject);
     setActiveSubject(set.subject);
@@ -428,20 +406,14 @@ Only output the flashcards in this format.`;
     setSwitchAnimKey((k) => k + 1);
   };
 
-  // Remove a stored set
   const handleDeleteStoredSet = (subjectToDelete: string) => {
     const sets = getStoredSets().filter((s) => s.subject !== subjectToDelete);
     saveStoredSets(sets);
     setStoredSets(sets);
-    // If currently viewing this set, go back to generator
     if (!showGenerator && (activeSubject === subjectToDelete || subject === subjectToDelete)) {
       handleBackToGenerator();
     }
   };
-
-  // --- Animation for blue circles ---
-  // We'll animate the "current" circle with a scale and color transition.
-  // We'll use a little CSS-in-JS for the animation keyframes.
 
   const circleAnimationStyleId = "flashcard-circle-anim-style";
   useEffect(() => {
@@ -462,28 +434,24 @@ Only output the flashcards in this format.`;
     }
   }, []);
 
-  // Track which circle was last animated
   const [lastAnimatedCircle, setLastAnimatedCircle] = useState<number | null>(null);
 
-  // When current changes, animate the corresponding circle
   useEffect(() => {
     setLastAnimatedCircle(current);
   }, [current]);
 
-  // --- Flashcard Switch Animation: trigger on current index change ---
   const [lastCurrent, setLastCurrent] = useState(current);
   const [switching, setSwitching] = useState(false);
 
   useEffect(() => {
     if (lastCurrent !== current) {
       setSwitching(true);
-      const timeout = setTimeout(() => setSwitching(false), 550);
+      const timeout = setTimeout(() => setSwitching(false), 220);
       setLastCurrent(current);
       return () => clearTimeout(timeout);
     }
   }, [current, lastCurrent]);
 
-  // --- Arrow navigation handlers ---
   const handlePrev = () => {
     if (current > 0) {
       setSwitchAnimKey((k) => k + 1);
@@ -500,7 +468,6 @@ Only output the flashcards in this format.`;
     }
   };
 
-  // Keyboard navigation for arrows (left/right)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!showGenerator && flashcards.length > 0) {
@@ -513,18 +480,39 @@ Only output the flashcards in this format.`;
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-    // eslint-disable-next-line
   }, [showGenerator, flashcards.length, current]);
+  // --- Copy end ---
+  // --- End: Copy unchanged logic from original code ---
+
+  // --- DESIGN LANGUAGE REWRITE FOR FLASHCARD PAGE ---
+  // The flashcard view now uses the same design language as the generator:
+  // - White/blue glassy card, border, shadow, rounded, padding, etc.
+  // - Consistent button and typography styles
 
   return (
-    <div className="w-3/4 mt-32">
-      <h2 className="text-xl font-bold mb-4 text-center">AI Flashcards Generator</h2>
+    <div className="w-3/4">
+      
       {showGenerator ? (
         <>
-          <form onSubmit={handleSubmit} className="mb-4 flex flex-col gap-2">
+          <div className="flex flex-col items-center mt-48 mb-12">
+            <h2 className="text-6xl font-extrabold text-white mb-2 text-center drop-shadow-lg tracking-tight">
+              AI Flashcards Generator
+            </h2>
+            <p className="text-lg text-gray-600 mb-8 text-center max-w-2xl">
+              Instantly generate high-quality flashcards for any subject. Enter a topic and let AI do the rest.
+            </p>
+          </div>
+          <form
+            onSubmit={handleSubmit}
+            className="mb-8 flex flex-col gap-4 w-full max-w-xl mx-auto bg-white/90 border border-blue-200 rounded-2xl shadow-xl p-10"
+          >
+            <label htmlFor="subject" className="text-lg font-medium text-blue-900 mb-1">
+              Subject or Topic
+            </label>
             <input
+              id="subject"
               type="text"
-              className="border p-2 rounded"
+              className="border border-blue-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 p-3 rounded-lg text-blue-900 bg-white placeholder-gray-400 transition-all duration-150"
               placeholder={animatedPlaceholder}
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
@@ -534,35 +522,54 @@ Only output the flashcards in this format.`;
             />
             <button
               type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+              className="mt-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold px-6 py-3 rounded-lg shadow-md transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
               disabled={loading}
             >
-              {loading ? "Generating flashcards..." : "Generate Flashcards"}
+              {loading ? (
+                <span>
+                  <span className="inline-block animate-spin mr-2 align-middle">&#9696;</span>
+                  Generating flashcards...
+                </span>
+              ) : (
+                "Generate Flashcards"
+              )}
             </button>
           </form>
-          {error && <div className="text-red-600 mb-2">{error}</div>}
-          {/* Show stored sets */}
+          {error && (
+            <div className="text-red-600 mb-4 text-center font-medium bg-red-50 border border-red-200 rounded-lg py-2 px-4 max-w-xl mx-auto">
+              {error}
+            </div>
+          )}
           {storedSets.length > 0 && (
-            <div className="mb-6">
-              <div className="font-semibold mb-2 text-gray-700">Your Flashcard Sets:</div>
+            <div className="mb-10 max-w-xl mx-auto bg-white/80 border border-gray-200 rounded-xl shadow p-6">
+              <div className="font-semibold mb-3 text-blue-800 text-lg flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7h18" /></svg>
+                Your Flashcard Sets
+              </div>
               <ul className="space-y-2">
                 {storedSets.map((set) => (
-                  <li key={set.subject} className="flex items-center justify-between group">
-                    <div className="flex items-center gap-2">
+                  <li
+                    key={set.subject}
+                    className="flex items-center justify-between group bg-blue-50/60 hover:bg-blue-100 rounded-lg px-4 py-2 transition"
+                  >
+                    <div className="flex items-center gap-3">
                       <button
-                        className="text-blue-700 underline hover:text-blue-900 text-left"
+                        className="text-blue-700 cursor-pointer font-medium underline underline-offset-2 hover:text-blue-900 text-left transition"
                         onClick={() => handleStoredSetClick(set)}
                       >
                         {set.subject}
                       </button>
-                      <button
-                        className="ml-2 text-xs text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
-                        title="Delete set"
-                        onClick={() => handleDeleteStoredSet(set.subject)}
-                      >
-                        ✕
-                      </button>
                     </div>
+                    <button
+                      className="ml-2 text-sm text-gray-400 cursor-pointer hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
+                      title="Delete set"
+                      onClick={() => handleDeleteStoredSet(set.subject)}
+                      aria-label={`Delete set ${set.subject}`}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -571,34 +578,41 @@ Only output the flashcards in this format.`;
         </>
       ) : (
         <>
-          {error && <div className="text-red-600 mb-2">{error}</div>}
+          {error && (
+            <div className="text-red-600 mb-4 text-center font-medium bg-red-50 border border-red-200 rounded-lg py-2 px-4 max-w-xl mx-auto">
+              {error}
+            </div>
+          )}
           {flashcards.length > 0 && (
-            <div className="flex flex-col items-center rounded-lg p-4">
+            <div className="flex flex-col items-center w-full">
               {/* Flashcard Set Title */}
-              <div className="w-full flex flex-col items-center mb-2">
-                <div className="text-2xl font-bold text-blue-800 text-center">
+              <div className="w-full flex flex-col items-center mt-24 mb-6">
+                <div className="text-6xl font-extrabold text-white text-center drop-shadow-lg tracking-tight mb-2">
                   {activeSubject || subject}
                 </div>
+                <div className="text-base text-gray-500 text-center mb-2">
+                  Flashcard {current + 1} of {flashcards.length}
+                </div>
               </div>
-              <div className="w-1/2 h-96 flex flex-row items-center justify-center relative">
+              <div className="w-full flex flex-row items-center justify-center mb-8 h-96">
                 {/* Left Arrow Button */}
                 <button
                   onClick={handlePrev}
                   disabled={current === 0}
                   aria-label="Previous flashcard"
-                  className={`absolute left-[-3.5rem] top-1/2 -translate-y-1/2 z-10 bg-white border border-gray-300 rounded-full shadow-lg w-14 h-14 flex items-center justify-center text-4xl font-bold text-blue-700 hover:bg-blue-50 transition disabled:opacity-40 disabled:cursor-not-allowed`}
+                  className={`text-blue-700 bg-white/90 border cursor-pointer border-blue-200 shadow-lg w-14 h-14 mr-6 rounded-full flex items-center justify-center transition hover:bg-blue-50 disabled:opacity-40`}
                   style={{ outline: "none" }}
                   tabIndex={0}
                 >
-                  &#8592;
+                  <ArrowLeftIcon className="w-8 h-8" />
                 </button>
                 <div
-                  className="flashcard-flip-container w-full h-full"
+                  className="flashcard-flip-container w-full max-w-2xl h-80"
                   style={{ minHeight: 120 }}
                 >
                   <div
                     key={switchAnimKey}
-                    className={`flashcard-flip ${showAnswer ? "flipped" : ""} bg-white w-full h-full rounded-xl shadow-2xl ${switching ? "flashcard-switch-anim" : ""}`}
+                    className={`flashcard-flip ${showAnswer ? "flipped" : ""} bg-white/90 w-full h-full rounded-2xl border border-blue-200 shadow-2xl ${switching ? "flashcard-switch-anim" : ""} transition-all duration-200`}
                     onClick={handleFlip}
                     tabIndex={0}
                     role="button"
@@ -615,15 +629,17 @@ Only output the flashcards in this format.`;
                     }}
                   >
                     {/* Front (Question) */}
-                    <div className="flashcard-flip-front px-6 py-6 w-full h-full">
-                      <div className="text-center text-base">
-                        {flashcards[current].question}
+                    <div className="flashcard-flip-front w-full h-full">
+                      <div className="flex flex-col items-center justify-center h-full px-12">
+                        <span className="text-center font-bold text-3xl text-blue-900">{flashcards[current].question}</span>
+                        <span className="mt-6 text-sm text-gray-400">Click to reveal answer</span>
                       </div>
                     </div>
                     {/* Back (Answer) */}
-                    <div className="flashcard-flip-back px-6 py-6 w-full h-full">
-                      <div className="text-center text-base">
-                        {flashcards[current].answer}
+                    <div className="flashcard-flip-back w-full h-full">
+                      <div className="flex flex-col items-center justify-center h-full px-12">
+                        <span className="text-center font-bold text-3xl text-green-900">{flashcards[current].answer}</span>
+                        <span className="mt-6 text-sm text-gray-400">Click to show question</span>
                       </div>
                     </div>
                   </div>
@@ -633,41 +649,65 @@ Only output the flashcards in this format.`;
                   onClick={handleNext}
                   disabled={current === flashcards.length - 1}
                   aria-label="Next flashcard"
-                  className={`absolute right-[-3.5rem] top-1/2 -translate-y-1/2 z-10 bg-white border border-gray-300 rounded-full shadow-lg w-14 h-14 flex items-center justify-center text-4xl font-bold text-blue-700 hover:bg-blue-50 transition disabled:opacity-40 disabled:cursor-not-allowed`}
+                  className={`text-blue-700 bg-white/90 border cursor-pointer border-blue-200 shadow-lg w-14 h-14 ml-6 rounded-full flex items-center justify-center transition hover:bg-blue-50 disabled:opacity-40`}
                   style={{ outline: "none" }}
                   tabIndex={0}
                 >
-                  &#8594;
+                  <ArrowRightIcon className="w-8 h-8" />
                 </button>
               </div>
-              <div className="flex gap-3 mt-32">
-                {flashcards.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleCircleClick(idx)}
-                    className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors cursor-pointer
-                      ${idx <= current
-                        ? "bg-[#00659C] opacity-100"
-                        : "bg-[#0094DE] opacity-50"
-                      }
-                      ${idx === current && lastAnimatedCircle === idx ? "flashcard-circle-anim" : ""}
-                    `}
-                    aria-label={`Go to flashcard ${idx + 1}`}
-                    style={{ outline: "none" }}
-                  ></button>
-                ))}
-              </div>
-              <div className="flex flex-col items-center w-full">
+              {(() => {
+                // Maximum number of circles per line before wrapping
+                const MAX_PER_LINE = 20;
+                const lines = [];
+                for (let i = 0; i < flashcards.length; i += MAX_PER_LINE) {
+                  lines.push(flashcards.slice(i, i + MAX_PER_LINE));
+                }
+                return (
+                  <div className="flex flex-col gap-2 mt-2 mb-8 items-center">
+                    {lines.map((line, lineIdx) => (
+                      <div key={lineIdx} className="flex gap-3">
+                        {line.map((_, idxInLine) => {
+                          const idx = lineIdx * MAX_PER_LINE + idxInLine;
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => handleCircleClick(idx)}
+                              className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors cursor-pointer
+                                ${idx <= current
+                                  ? "bg-[#00659C] opacity-100"
+                                  : "bg-[#0094DE] opacity-50"
+                                }
+                                ${idx === current && lastAnimatedCircle === idx ? "flashcard-circle-anim" : ""}
+                              `}
+                              aria-label={`Go to flashcard ${idx + 1}`}
+                              style={{ outline: "none" }}
+                            ></button>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+              <div className="flex justify-center gap-4 mt-16 flex-row items-center w-full">
                 <button
                   onClick={handleAddMore}
-                  className="mt-6 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
+                  className=" bg-gradient-to-r cursor-pointer from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-semibold px-6 py-3 rounded-lg shadow-md transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
                   disabled={loading || addingMore}
                 >
-                  {addingMore ? "Adding more flashcards..." : "Add 5 More Questions"}
+                  {addingMore ? (
+                    <span>
+                      <span className="inline-block animate-spin mr-2 align-middle">&#9696;</span>
+                      Adding more flashcards...
+                    </span>
+                  ) : (
+                    "Add 5 More Questions"
+                  )}
                 </button>
                 <button
                   onClick={handleBackToGenerator}
-                  className="mt-4 bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400 transition"
+                  className=" bg-gray-200 cursor-pointer text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-300 transition font-semibold shadow"
                 >
                   Back to Generator
                 </button>
