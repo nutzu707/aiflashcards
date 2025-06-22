@@ -276,6 +276,7 @@ const Flashcards = () => {
   }, []);
 
   // Helper to generate flashcards (5 at a time)
+  // eslint-disable-next-line
   const generateFlashcards = async (subject: string, prevQuestions: string[] = [], isAddMore = false) => {
     setLoading(true);
     setError(null);
