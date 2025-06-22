@@ -494,17 +494,17 @@ Only output the flashcards in this format.`;
       
       {showGenerator ? (
         <>
-          <div className="flex flex-col items-center mt-48 mb-12">
+          <div className="flex flex-col items-center mt-32 mb-12">
             <h2 className="text-6xl font-extrabold text-white mb-2 text-center drop-shadow-lg tracking-tight">
               AI Flashcards Generator
             </h2>
-            <p className="text-lg text-gray-600 mb-8 text-center max-w-2xl">
+            <p className="text-lg text-gray-600 mb-8 text-center max-w-xl">
               Instantly generate high-quality flashcards for any subject. Enter a topic and let AI do the rest.
             </p>
           </div>
           <form
             onSubmit={handleSubmit}
-            className="mb-8 flex flex-col gap-4 w-full max-w-xl mx-auto bg-white/90 border border-blue-200 rounded-2xl shadow-xl p-10"
+            className="mb-8 flex flex-col gap-4 max-w-2xl mx-auto bg-white/90 border border-blue-200 rounded-2xl shadow-xl p-10"
           >
             <label htmlFor="subject" className="text-lg font-medium text-blue-900 mb-1">
               Subject or Topic
@@ -541,7 +541,7 @@ Only output the flashcards in this format.`;
             </div>
           )}
           {storedSets.length > 0 && (
-            <div className="mb-10 max-w-xl mx-auto bg-white/80 border border-gray-200 rounded-xl shadow p-6">
+            <div className="mb-10 max-w-2xl mx-auto bg-white/80 border border-gray-200 rounded-xl shadow p-6">
               <div className="font-semibold mb-3 text-blue-800 text-lg flex items-center gap-2">
                 <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7h18" /></svg>
                 Your Flashcard Sets
