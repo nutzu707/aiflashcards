@@ -5,7 +5,8 @@ export default function Home() {
     <div
       className="flex justify-center min-h-screen"
       style={{
-        background: "linear-gradient(135deg, #00A5F7 0%, #38bdf8 100%)",
+        background:
+          "linear-gradient(135deg, #007cf0 0%, #00dfd8 40%, #38bdf8 70%, #2563eb 100%)",
       }}
     >
       <Flashcards />
